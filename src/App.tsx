@@ -5,7 +5,6 @@ import {
   UserProfile,
   Language,
   AgeGroup,
-  VideoSettings,
   Attachment,
 } from './types';
 import { translations } from './translations';
@@ -14,7 +13,6 @@ import { ChatMessage } from './components/ChatMessage';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ChatHistoryDrawer } from './components/ChatHistoryDrawer';
-import { VideoSettingsModal } from './components/VideoSettingsModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { ImageLightbox } from './components/ImageLightbox';
 import { Sparkles, ArrowRight } from 'lucide-react';
@@ -22,7 +20,6 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 const STORAGE_KEY_SESSIONS = 'uzbechigpt_sessions_v2';
 const STORAGE_KEY_ACTIVE = 'uzbechigpt_active_session_v2';
 const STORAGE_KEY_PROFILE = 'uzbechigpt_user_profile_v2';
-const STORAGE_KEY_SETTINGS = 'uzbechigpt_video_settings_v2';
 
 export const App: React.FC = () => {
   // 1. User Profile & Preferences
@@ -43,24 +40,7 @@ export const App: React.FC = () => {
   const language = userProfile.language;
   const t = translations[language];
 
-  // 2. Video & Image Settings
-  const [videoSettings, setVideoSettings] = useState<VideoSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {
-      duration: 8,
-      quality: 'High',
-      resolution: '720p',
-      aspectRatio: '1:1',
-      style: 'Cinematic',
-      camera: 'Static',
-      pollinationsApiKey: '',
-    };
-  });
-
-  // 3. Chat Sessions
+  // 2. Chat Sessions
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SESSIONS);
@@ -80,7 +60,6 @@ export const App: React.FC = () => {
   // 4. UI State
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [lightboxData, setLightboxData] = useState<{ url: string; alt?: string } | null>(null);
 
@@ -92,10 +71,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(userProfile));
   }, [userProfile]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(videoSettings));
-  }, [videoSettings]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
@@ -293,7 +268,6 @@ export const App: React.FC = () => {
 
     // 2. Check Video Generation Intent SECOND - DO NOT call text AI
     if (isVideoRequest(text)) {
-      await handleVideoGeneration(text, attachments);
       return;
     }
 
@@ -375,178 +349,6 @@ export const App: React.FC = () => {
   };
 
   // 2. Video Generation Pipeline
-  const handleVideoGeneration = async (promptText: string, attachments: Attachment[]) => {
-    setIsGenerating(true);
-
-    const modelMessageId = `msg_vid_${Date.now()}`;
-    const initialModelMessage: Message = {
-      id: modelMessageId,
-      role: 'model',
-      text: '',
-      timestamp: Date.now(),
-      generatedVideo: {
-        prompt: promptText,
-        duration: videoSettings.duration,
-        quality: videoSettings.quality,
-        status: 'generating',
-        progressStage: t.videoProgress1,
-      },
-      isGenerating: true,
-    };
-
-    updateActiveMessages((prev) => [...prev, initialModelMessage]);
-    setTimeout(() => scrollToBottom(), 50);
-
-    try {
-      const refImg = attachments.find((a) => a.type === 'image');
-      const res = await fetch('/api/generate-video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: promptText,
-          duration: videoSettings.duration,
-          quality: videoSettings.quality,
-          resolution: videoSettings.resolution,
-          aspectRatio: videoSettings.aspectRatio,
-          style: videoSettings.style,
-          camera: videoSettings.camera,
-          referenceImage: refImg ? { data: refImg.data, mimeType: refImg.mimeType } : undefined,
-          language,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Video creation could not be started');
-      }
-
-      if (data.status === 'completed' && data.videoUrl) {
-        updateActiveMessages((prev) =>
-          prev.map((m) =>
-            m.id === modelMessageId
-              ? {
-                  ...m,
-                  generatedVideo: {
-                    ...m.generatedVideo!,
-                    status: 'completed',
-                    videoUrl: data.videoUrl,
-                  },
-                  isGenerating: false,
-                }
-              : m
-          )
-        );
-        setIsGenerating(false);
-        return;
-      }
-
-      // Poll video progress if async
-      if (data.operationName) {
-        pollVideoStatus(data.operationName, modelMessageId, promptText);
-      }
-    } catch (err: any) {
-      console.error('Video generation error:', err);
-      updateActiveMessages((prev) =>
-        prev.map((m) =>
-          m.id === modelMessageId
-            ? {
-                ...m,
-                generatedVideo: {
-                  ...m.generatedVideo!,
-                  status: 'failed',
-                  error: err.message || t.apiError,
-                },
-                isGenerating: false,
-                isError: true,
-              }
-            : m
-        )
-      );
-      setIsGenerating(false);
-    }
-  };
-
-  const pollVideoStatus = async (operationName: string, messageId: string, promptText: string) => {
-    let attempts = 0;
-    const maxAttempts = 60;
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const res = await fetch(`/api/video-status?name=${encodeURIComponent(operationName)}`);
-        const statusData = await res.json();
-
-        if (statusData.done) {
-          clearInterval(interval);
-          setIsGenerating(false);
-
-          if (statusData.error) {
-            updateActiveMessages((prev) =>
-              prev.map((m) =>
-                m.id === messageId
-                  ? {
-                      ...m,
-                      generatedVideo: {
-                        ...m.generatedVideo!,
-                        status: 'failed',
-                        error: statusData.error,
-                      },
-                      isGenerating: false,
-                      isError: true,
-                    }
-                  : m
-              )
-            );
-          } else if (statusData.videoUrl) {
-            updateActiveMessages((prev) =>
-              prev.map((m) =>
-                m.id === messageId
-                  ? {
-                      ...m,
-                      generatedVideo: {
-                        ...m.generatedVideo!,
-                        status: 'completed',
-                        videoUrl: statusData.videoUrl,
-                      },
-                      isGenerating: false,
-                    }
-                  : m
-              )
-            );
-          }
-        } else {
-          const stage =
-            attempts < 5
-              ? t.videoProgress1
-              : attempts < 15
-              ? t.videoProgress2
-              : t.videoProgress3;
-
-          updateActiveMessages((prev) =>
-            prev.map((m) =>
-              m.id === messageId
-                ? {
-                    ...m,
-                    generatedVideo: {
-                      ...m.generatedVideo!,
-                      progressStage: stage,
-                    },
-                  }
-                : m
-            )
-          );
-        }
-
-        if (attempts >= maxAttempts) {
-          clearInterval(interval);
-          setIsGenerating(false);
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
-    }, 5000);
-  };
-
-  // 3. Conversational Chat Streaming
   const handleChatStreaming = async (text: string, attachments: Attachment[]) => {
     setIsGenerating(true);
     abortControllerRef.current = new AbortController();
@@ -739,7 +541,6 @@ export const App: React.FC = () => {
       <Header
         onToggleDrawer={() => setIsDrawerOpen(true)}
         onNewChat={createNewChat}
-        onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         onDownloadZip={handleDownloadZip}
         userProfile={userProfile}
@@ -794,14 +595,6 @@ export const App: React.FC = () => {
         onDeleteSession={deleteSession}
         onRenameSession={renameSession}
         onClearAll={clearAllSessions}
-        language={language}
-      />
-
-      <VideoSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={videoSettings}
-        onSaveSettings={(s) => setVideoSettings(s)}
         language={language}
       />
 

@@ -3,7 +3,6 @@ import {
   Menu,
   Plus,
   Sparkles,
-  Sliders,
   User,
   Download,
   Languages,
@@ -15,7 +14,6 @@ import { translations } from '../translations';
 interface HeaderProps {
   onToggleDrawer: () => void;
   onNewChat: () => void;
-  onOpenSettings: () => void;
   onOpenProfile: () => void;
   onDownloadZip: () => void;
   userProfile: UserProfile;
@@ -27,7 +25,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onToggleDrawer,
   onNewChat,
-  onOpenSettings,
   onOpenProfile,
   onDownloadZip,
   userProfile,
@@ -133,16 +130,6 @@ export const Header: React.FC<HeaderProps> = ({
             EN
           </button>
         </div>
-
-        {/* Video & Image Settings Modal button */}
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
-          title={t.videoSettings}
-        >
-          <Sliders className="w-4 h-4" />
-        </button>
 
         {/* Download Zip button */}
         <button

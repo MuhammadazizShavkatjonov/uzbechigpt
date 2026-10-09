@@ -260,51 +260,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </div>
           )}
 
-          {/* Generated Video Card */}
-          {message.generatedVideo && (
-            <div className="mt-3 rounded-2xl overflow-hidden border border-blue-500/30 bg-black/50 shadow-xl p-3">
-              {message.generatedVideo.status === 'generating' ? (
-                <div className="py-6 px-4 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="relative w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                    <Film className="w-6 h-6 animate-pulse" />
-                    <Loader2 className="w-6 h-6 animate-spin absolute text-purple-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-white text-xs sm:text-sm">{t.generatingVideo}</h4>
-                    <p className="text-[11px] text-zinc-400 mt-1 max-w-xs animate-pulse">
-                      {message.generatedVideo.progressStage || t.videoProgress1}
-                    </p>
-                  </div>
-                </div>
-              ) : message.generatedVideo.status === 'completed' && message.generatedVideo.videoUrl ? (
-                <div className="space-y-2">
-                  <video
-                    src={message.generatedVideo.videoUrl}
-                    controls
-                    className="w-full rounded-xl max-h-[360px] bg-black"
-                  />
-                  <div className="flex items-center justify-between pt-1 text-xs">
-                    <span className="text-zinc-400 truncate max-w-[60%] text-[11px]">
-                      {message.generatedVideo.prompt}
-                    </span>
-                    <a
-                      href={message.generatedVideo.videoUrl}
-                      download={`uzbechigpt-video-${Date.now()}.mp4`}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{t.download}</span>
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-3 px-2 text-rose-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span>{message.generatedVideo.error || t.apiError}</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Message Action Toolbar */}

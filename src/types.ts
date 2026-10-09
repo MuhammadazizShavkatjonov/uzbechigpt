@@ -29,17 +29,6 @@ export interface SearchImageItem {
   sourceUrl?: string;
 }
 
-export interface GeneratedVideo {
-  videoUrl?: string;
-  prompt: string;
-  duration?: number;
-  quality?: string;
-  status: 'generating' | 'completed' | 'failed';
-  operationName?: string;
-  progressStage?: string;
-  error?: string;
-}
-
 export interface Message {
   id: string;
   role: 'user' | 'model';
@@ -49,7 +38,6 @@ export interface Message {
   generatedImage?: GeneratedImage;
   searchedImages?: SearchImageItem[];
   searchQuery?: string;
-  generatedVideo?: GeneratedVideo;
   isGenerating?: boolean;
   isError?: boolean;
 }
@@ -71,12 +59,3 @@ export interface UserProfile {
   onboarded: boolean;
 }
 
-export interface VideoSettings {
-  duration: number; // 5, 8, 10, 15, 20, 30
-  quality: 'Standard' | 'High' | 'Ultra';
-  resolution: '480p' | '720p' | '1080p' | '2K' | '4K';
-  aspectRatio: '16:9' | '9:16' | '1:1';
-  style: 'Realistic' | 'Cinematic' | '3D' | 'Animation';
-  camera: 'Static' | 'Zoom In' | 'Zoom Out' | 'Tracking Shot' | 'Drone Shot';
-  pollinationsApiKey?: string;
-}
