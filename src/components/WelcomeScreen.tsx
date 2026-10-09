@@ -36,10 +36,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       text: t.sugg1,
     },
     {
-      icon: <Video className="w-4 h-4 text-purple-400" />,
-      text: t.sugg2,
-    },
-    {
       icon: <Zap className="w-4 h-4 text-amber-400" />,
       text: t.sugg3,
     },
