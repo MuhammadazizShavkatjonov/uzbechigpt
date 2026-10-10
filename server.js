@@ -305,27 +305,27 @@ ${att.textSnippet}` });
   }
 });
 function extractSearchSubject(rawText) {
-  let q = rawText.trim();
-  const landmarkMap = [
-    { regex: /toshkent\s+teleminorasi\w*|tashkent\s+tv\s+tower|ташкентск\w*\s+телебашн\w*/i, target: "Tashkent TV tower" },
-    { regex: /samarqand\s+registoni\w*|registon|регистан/i, target: "Samarkand Registan" },
-    { regex: /samarqand|самарканд/i, target: "Samarkand" },
-    { regex: /buxoro\s+minorai\s+kalon\w*|minorai\s+kalon/i, target: "Kalyan Minaret Bukhara" },
-    { regex: /buxoro|бухара/i, target: "Bukhara" },
-    { regex: /xiva\s+ichan\s+qal\w*|ichan\s+qal\w*|ичан\s+кала/i, target: "Itchan Kala Khiva" },
-    { regex: /xiva|хива/i, target: "Khiva" },
-    { regex: /bmw\s+m5/i, target: "BMW M5" },
-    { regex: /oq\s+bmw/i, target: "White BMW" },
-    { regex: /qora\s+bmw/i, target: "Black BMW" },
-    { regex: /bmw/i, target: "BMW" }
-  ];
-  for (const item of landmarkMap) {
-    if (item.regex.test(q)) {
-      return item.target;
-    }
+  let q = rawText.trim().replace(/^(?:\/image|\/img|\/draw|image:|img:|rasm:)\s*/i, "").replace(/^(?:menga|bizga|iltimos|men uchun|mening uchun)\s+/i, "").replace(/^(?:yangi|eski)\s+(?=(?:telefon|iphone|samsung|mashina)\b)/i, "").replace(/\b(?:rasmini|rasimi|rasmlarini|rasmlari|rasmi|rasm|fotosini|suratini|surati|kerak|ber|topib ber|ko'rsatib ber|ko'rsat|modelini|modeli|yani|ya'ni)\b/gi, " ").replace(/\s+/g, " ").trim();
+  const iphone = q.match(/\biphone\s*(\d{1,2})(?:\s*(pro\s*max|pro|max|plus|mini))?\b/i);
+  if (iphone) {
+    const variant = (iphone[2] || "").replace(/\s+/g, " ").trim();
+    return `Apple iPhone ${iphone[1]}${variant ? " " + variant : ""}`;
   }
-  q = q.replace(/^(menga|bizga|iltimos|mening\s+uchun)\s+/i, "").replace(/^(нарисуй|найди|найдите|покажи|покажите|сгенерируй|создай|сделай|пожалуйста)\s+/i, "").replace(/^(find|search|show\s+me|show|get|create|display)\s+(photos\s+of|pictures\s+of|images\s+of|photo\s+of|image\s+of|picture\s+of)?\s*/i, "").replace(/\s*(rasmini|rasmlarini|rasmlari|rasmi|rasm|fotosini|fotolarini|foto|suratini|suratlarini|surat)\s*(topib\s+ber|top|ko\x27rsatib\s+ber|ko\x27rsat|qidirib\s+ber|qidir|yaratib\s+ber|yarat|chiqarib\s+ber|ber)?\s*$/i, "").replace(/\s*(фотографии|фото|картинки|картинку|изображения|изображение)\s*$/i, "").trim();
-  return q || rawText;
+  const samsung = q.match(/\b(?:samsung\s*)?(galaxy\s*)?(s\d{1,2}|a\d{1,2}|z\s*(?:flip|fold)\s*\d?)\b/i);
+  if (samsung) return `Samsung ${samsung[0].replace(/\s+/g, " ").trim()}`;
+  const known = [
+    { regex: /samarqand\s+registoni|registon|регистан/i, target: "Samarkand Registan" },
+    { regex: /samarqand|самарканд/i, target: "Samarkand" },
+    { regex: /buxoro|бухара/i, target: "Bukhara Uzbekistan" },
+    { regex: /xiva|хива/i, target: "Khiva Uzbekistan" },
+    { regex: /\bbmw\s*m5\b/i, target: "BMW M5" },
+    { regex: /\bbmw\b/i, target: "BMW car" }
+  ];
+  for (const item of known) {
+    if (item.regex.test(q)) return item.target;
+  }
+  q = q.replace(/\b(telefon|mashina|avtomobil|kompyuter|noutbuk)ni\b/gi, "$1").replace(/\b(telefon|mashina|avtomobil|kompyuter|noutbuk)\b/gi, "$1").trim();
+  return q;
 }
 app.post("/api/search-images", async (req, res) => {
   try {
@@ -413,7 +413,7 @@ app.post("/api/search-images", async (req, res) => {
         text: msg
       });
     }
-    const noResultsMsg = language === "ru" ? `\u26A0\uFE0F \u0424\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0438 \u043F\u043E \u0437\u0430\u043F\u0440\u043E\u0441\u0443 \xAB${cleanSubject}\xBB \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u044B. \u0414\u043B\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u043F\u043E\u0438\u0441\u043A\u0430 Unsplash \u0443\u043A\u0430\u0436\u0438\u0442\u0435 UNSPLASH_ACCESS_KEY \u0432 \u0444\u0430\u0439\u043B\u0435 .env.` : language === "en" ? `\u26A0\uFE0F No photos found for "${cleanSubject}". To enable Unsplash photo search, configure UNSPLASH_ACCESS_KEY in your .env file.` : `\u26A0\uFE0F \xAB${cleanSubject}\xBB bo\u2018yicha rasmlar topilmadi. Unsplash orqali qidiruv uchun .env faylida UNSPLASH_ACCESS_KEY ni sozlang.`;
+    const noResultsMsg = language === "ru" ? `\u26A0\uFE0F \u0424\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0438 \u043F\u043E \u0437\u0430\u043F\u0440\u043E\u0441\u0443 \xAB${cleanSubject}\xBB \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u044B. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u043F\u043E\u0438\u0441\u043A\u043E\u0432\u044B\u0439 \u0437\u0430\u043F\u0440\u043E\u0441.` : language === "en" ? `\u26A0\uFE0F No photos found for "${cleanSubject}". Try changing your search terms.` : `\u26A0\uFE0F \xAB${cleanSubject}\xBB bo\u2018yicha rasmlar topilmadi. Unsplash orqali qidiruv uchun .env faylida UNSPLASH_ACCESS_KEY ni sozlang.`;
     return res.status(404).json({
       error: noResultsMsg,
       query: cleanSubject

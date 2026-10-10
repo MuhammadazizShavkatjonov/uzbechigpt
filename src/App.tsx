@@ -209,6 +209,7 @@ export const App: React.FC = () => {
     const keywords = [
       // Uzbek
       'rasm',
+      'rasim',
       'tasvir',
       'surat',
       'chiz',
